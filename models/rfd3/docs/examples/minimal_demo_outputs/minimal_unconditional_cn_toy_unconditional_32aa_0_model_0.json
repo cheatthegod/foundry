@@ -1,0 +1,40 @@
+{
+    "diffused_index_map": {},
+    "metrics": {
+        "max_ca_deviation": 1814.3857421875,
+        "n_chainbreaks": 31,
+        "n_clashing.interresidue_clashes_w_sidechain": 0,
+        "n_clashing.interresidue_clashes_w_backbone": 0,
+        "non_loop_fraction": 0.0,
+        "loop_fraction": 1.0,
+        "helix_fraction": 0.0,
+        "sheet_fraction": 0.0,
+        "num_ss_elements": 0,
+        "radius_of_gyration": 946.9147875969052,
+        "alanine_content": 0.09375,
+        "glycine_content": 0.0625,
+        "num_residues": 32,
+        "diffused_com": [
+            -54.458091735839844,
+            17.42943572998047,
+            -17.43162727355957
+        ]
+    },
+    "specification": {
+        "length": "32",
+        "extra": {
+            "note": "Minimal unconditional RFdiffusion3 demo",
+            "example": "toy_unconditional_32aa",
+            "task_name": "minimal_unconditional_cn_toy_unconditional_32aa",
+            "sampled_contig": "32",
+            "num_tokens_in": 32,
+            "num_residues_in": 32,
+            "num_chains": 1,
+            "num_atoms": 160,
+            "num_residues": 33,
+            "example_id": "minimal_unconditional_cn_toy_unconditional_32aa_0"
+        }
+    },
+    "ckpt_path": "/home/ubuntu/cqr_files/protein_design/checkpoints/rfd3_latest.ckpt",
+    "seed": 0
+}

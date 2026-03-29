@@ -1,0 +1,8 @@
+{
+  "toy_unconditional_32aa": {
+    "length": 32,
+    "extra": {
+      "note": "Minimal unconditional RFdiffusion3 demo"
+    }
+  }
+}
