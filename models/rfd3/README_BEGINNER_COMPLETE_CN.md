@@ -585,6 +585,230 @@ M0255_1mg5.pdb
 
 > `M0255_1mg5.pdb` 先被编译成带注释的 `AtomArray`，再提取成 token/atom 特征；这些特征决定 `I` 和 `L`，噪声采样器给出 `t`，坐标和噪声相加得到 `X_L`，缩放后得到 `R_L`；`TokenInitializer` 从静态条件里构造 `Q_L/C_L/P_LL/S_I/Z_II`，再由 atom 模块和 token 模块把信息压到 `A_I`，最后 decoder 把 `A_I` 翻译回新的 `X_L` 和序列预测。`
 
+### 7.0.5 `Q_L` 和 `C_L` 到底怎么来的
+
+这是最容易把人绕晕的地方，因为源码里既有：
+
+- `Q_L_init`
+- `C_L`
+- 后面又重新构造一轮新的 `Q_L`
+- 还会把加了时间信息的结果继续叫 `C_L`
+
+如果不把这几层拆开，你会一直觉得“它们名字很像，但不知道差在哪”。
+
+先看 `TokenInitializer` 里的真实逻辑：
+
+```python
+Q_L_init = atom_1d_embedder_2(f, L)
+C_L = Q_L_init + process_s_trunk(S_init_I)[..., tok_idx, :]
+```
+
+这两句分别在干什么：
+
+1. `Q_L_init = atom_1d_embedder_2(f, L)`
+   只看 atom 自己的 1D 特征，给每个 atom 一个初始向量。
+
+2. `C_L = Q_L_init + process_s_trunk(S_init_I)[..., tok_idx, :]`
+   在 `Q_L_init` 的基础上，再加上“这个 atom 所属 token 的静态上下文”。
+
+所以最准确的理解是：
+
+- `Q_L_init`
+  是 **atom 自己的初始身份表示**
+- `C_L`
+  是 **atom 自己的身份表示 + 它所属 token 的静态上下文**
+
+### 7.0.6 `Q_L_init` 到底看了哪些特征
+
+`Q_L_init` 的来源是 `atom_1d_embedder_2`，它读取的是 atom 级 1D 特征。
+
+对 `M0255` 这个例子，你可以把它理解成主要看这些信息：
+
+- 这个 atom 是什么元素
+- 这个 atom 名字是什么
+- 它有没有电荷
+- 它是不是有效 atom
+- 它的参考位置 `ref_pos` 是什么
+- 它是不是固定坐标 atom
+- 它是不是 unindexed motif atom
+- 它是不是 donor / acceptor / hotspot
+
+也就是说，`Q_L_init` 更像是在回答：
+
+> **“这个 atom 自己是谁？”**
+
+如果拿 `M0255` 里的 `ACT:OXT` 来想：
+
+- 它是一个氧原子
+- 名字是 `OXT`
+- 它属于 ligand
+- 它在输入里被标成 fixed coordinate
+- 它有明确的参考位置
+
+这些信息会直接进入 `Q_L_init[ACT:OXT]`。
+
+### 7.0.7 `C_L` 比 `Q_L_init` 多了什么
+
+`C_L` 不是另起炉灶重新算的，它是：
+
+```text
+C_L = Q_L_init + token_context
+```
+
+这里的 `token_context` 来自 `S_init_I`，也就是 token 级静态表示。
+
+`S_init_I` 又不是凭空来的，它吸收了：
+
+- `restype`
+- `ref_motif_token_type`
+- `is_non_loopy`
+- `ref_plddt`
+- relative position encoding
+- token bonds
+- ligand 的参考几何
+- token pair 经过小型 Pairformer 之后的上下文
+
+所以 `C_L` 其实是在回答：
+
+> **“这个 atom 不光自己是谁，它还属于一个什么样的 token，这个 token 在整个设计任务里处于什么静态环境中？”**
+
+继续用 `M0255` 的 `ACT:OXT` 举例：
+
+- `Q_L_init` 只告诉你“这是 OXT，这个 atom 自己是个固定氧原子”
+- `C_L` 还会告诉你“它属于 `ACT` 这个 ligand token，而这个 ligand token 和别的 token 有什么 bond / 几何 / 相对位置关系”
+
+### 7.0.8 到单步 denoise 时，`Q_L` 和 `C_L` 又怎么变
+
+进入 `RFD3DiffusionModule.forward()` 之后，源码会这么做：
+
+```python
+Q_L = Q_L_init.unsqueeze(0) + process_r(R_noisy_L)
+C_L = C_L.unsqueeze(0) + process_time_(t_L, i=0)
+S_I = S_I.unsqueeze(0) + process_time_(t_I, i=1)
+C_L = C_L + process_c(C_L)
+```
+
+这几句必须拆开看：
+
+1. `Q_L = Q_L_init + process_r(R_noisy_L)`
+   这说明 `Q_L` 会显式吃“当前 noisy 坐标”。
+
+2. `C_L = C_L_static + time_embedding`
+   这说明 `C_L` 会显式吃“当前时间步 / 当前噪声尺度”。
+
+所以到真正扩散时：
+
+- `Q_L` 更偏 **当前内容状态**
+- `C_L` 更偏 **当前条件状态**
+
+一句话压缩：
+
+- `Q_L`：这个 atom 现在看起来像什么
+- `C_L`：这个 atom 现在应该在什么条件下被处理
+
+### 7.0.9 为什么要分成两条，而不是揉成一条
+
+因为它们承担的是两种不同职责。
+
+`Q_L` 的职责是：
+
+- 做 query / key / value
+- 被 attention 更新
+- 被 transition 更新
+- 最后拿去预测坐标更新量
+
+`C_L` 的职责是：
+
+- 作为条件，进入 AdaLN
+- 作为条件，控制 attention 输出门控
+- 作为条件，控制 transition block 的更新强弱
+
+也就是说：
+
+- `Q_L` 是被生成、被修改、被读出的主状态
+- `C_L` 是控制主状态怎么变的条件信号
+
+如果硬要打比方：
+
+- `Q_L` 是演员当前表演出来的状态
+- `C_L` 是导演实时给他的提示卡
+
+### 7.0.10 在 atom attention 里，`Q_L` 和 `C_L` 的分工是什么
+
+在 `LocalAtomTransformer` 里，block 的接口是：
+
+```python
+Q_L = block(Q_L, C_L, P_LL, ...)
+```
+
+真正的分工是：
+
+1. `Q_L` 经过 `to_q / to_k / to_v`
+   所以 attention 真正关注和传播的是 `Q_L`。
+
+2. `C_L` 进入 `AdaLN`
+   所以在做注意力前，`Q_L` 会先被 `C_L` 条件化。
+
+3. `C_L` 进入 output gate
+   所以注意力的输出强弱会被 `C_L` 调节。
+
+4. `C_L` 进入 `ConditionedTransitionBlock`
+   所以 attention 之后的 MLP 更新也受 `C_L` 控制。
+
+所以你可以把 atom block 理解成：
+
+```text
+先用 C_L 调整 Q_L 的工作模式
+再让 Q_L 和邻居交流
+最后继续用 C_L 决定 Q_L 该更新多少
+```
+
+### 7.0.11 用 `M0255` 里的两类 atom 对照理解
+
+现在拿两类 atom 对照最容易懂：
+
+#### 情况 A：固定锚点 atom，例如 `ACT:OXT`
+
+它的特点是：
+
+- fixed coordinate
+- 有明确参考位置
+- 对整个设计是锚点，不是自由漂浮点
+
+对它来说：
+
+- `Q_L_init` 会强烈体现“它是固定 ligand atom”
+- `C_L` 会体现“它属于 `ACT` 这个 ligand token”
+- 在 diffusion 时，`t_L` 会因为 fixed-coordinate mask 被压成 0
+
+也就是说，这类 atom 的 `C_L` 会告诉网络：
+
+> **“别把我当普通待设计原子来大幅扰动，我更像整个体系的几何锚点。”**
+
+#### 情况 B：待设计区域里的普通 atom
+
+这类 atom 的特点是：
+
+- 不是 fixed coordinate
+- 没有被完全固定序列
+- 当前坐标高度依赖噪声初始化和后续采样
+
+对它来说：
+
+- `Q_L` 会强烈依赖当前 noisy 坐标
+- `C_L` 会告诉网络它处在什么 token 上下文、现在噪声多大、周围有哪些条件
+
+也就是说，这类 atom 的 `C_L` 会告诉网络：
+
+> **“你现在可以改我，但要根据我所属残基/配体环境、当前时间步和周围 motif 条件来改。”**
+
+### 7.0.12 最后只记这 4 句就够了
+
+1. `Q_L_init` 来自 atom 自己的静态特征。
+2. `C_L` 来自 `Q_L_init +` 它所属 token 的静态上下文。
+3. 单步 denoise 时，`Q_L` 再加当前坐标，`C_L` 再加当前时间。
+4. 网络主要更新的是 `Q_L`，而 `C_L` 主要负责控制 `Q_L` 怎么更新。
+
 ### 7.1 TokenInitializer：建立背景地图
 
 **类比**：在开始玩拼图之前，先看一眼盒子上的图案，建立对整体的初步印象。
