@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - data: public_bootstrap
+
+root_dir: ${oc.env:PROJECT_ROOT}
+log_dir: ${.root_dir}/models/rfd3/local_runs
+output_dir: ${hydra:runtime.output_dir}
+work_dir: ${hydra:runtime.cwd}

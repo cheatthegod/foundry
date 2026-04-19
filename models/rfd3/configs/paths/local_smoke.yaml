@@ -1,0 +1,9 @@
+# NOTE: order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - data: local_smoke
+
+root_dir: ${oc.env:PROJECT_ROOT}
+log_dir: ${.root_dir}/models/rfd3/local_runs
+output_dir: ${hydra:runtime.output_dir}
+work_dir: ${hydra:runtime.cwd}

@@ -1,0 +1,42 @@
+# @package _global_
+
+defaults:
+  - override /datasets: prot2text_core_64_1024
+  - override /paths: local_smoke
+  - override /logger: csv
+  - _self_
+
+name: rfd3-prot2text-core-bootstrap
+project: rfd3-prot2text
+tags:
+  - prot2text
+  - monomer
+  - bootstrap
+  - noligand
+ckpt_path: null
+
+trainer:
+  devices_per_node: 1
+  num_nodes: 1
+  precision: bf16-mixed
+  grad_accum_steps: 4
+  checkpoint_every_n_epochs: 1
+  validate_every_n_epochs: 1000
+  prevalidate: False
+
+dataloader:
+  train:
+    dataloader_params:
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 8
+  val:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 0
+
+datasets:
+  val: null

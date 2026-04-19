@@ -1,0 +1,62 @@
+# @package _global_
+
+defaults:
+  - override /paths: public_full
+  - override /logger: csv
+  - _self_
+
+name: rfd3-public-pretrain-4gpu
+project: rfd3-public
+tags:
+  - public
+  - pretrain
+  - 4gpu
+  - nohb
+ckpt_path: null
+
+trainer:
+  devices_per_node: 4
+  num_nodes: 1
+  precision: bf16-mixed
+  grad_accum_steps: 4
+  checkpoint_every_n_epochs: 1
+  validate_every_n_epochs: 1000000
+  prevalidate: False
+
+dataloader:
+  train:
+    dataloader_params:
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 4
+    n_fallback_retries: 16
+  val:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 0
+
+datasets:
+  diffusion_batch_size_train: 16
+  crop_size: 256
+  max_atoms_in_crop: 2560
+  val: null
+  train:
+    pdb:
+      probability: 1.0
+  global_transform_args:
+    train_conditions:
+      unconditional:
+        frequency: 2.0
+      island:
+        frequency: 2.0
+      sequence_design:
+        frequency: 0.5
+      tipatom:
+        frequency: 5.0
+      ppi:
+        frequency: 0.0
+    meta_conditioning_probabilities:
+      calculate_hbonds: 0.0
+      hbond_subsample: 0.0

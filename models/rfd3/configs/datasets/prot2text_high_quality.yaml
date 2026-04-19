@@ -1,0 +1,91 @@
+defaults:
+  - train/pdb/base_no_weights@train.high_quality
+  - conditions/unconditional@global_transform_args.train_conditions.unconditional
+  - conditions/island@global_transform_args.train_conditions.island
+  - conditions/tipatom@global_transform_args.train_conditions.tipatom
+  - conditions/sequence_design@global_transform_args.train_conditions.sequence_design
+  - conditions/ppi@global_transform_args.train_conditions.ppi
+  - _self_
+
+# Enzymes with pLDDT>=85.0, non-loopy, buried>=0.20
+# Train size: 3,208
+
+pipeline_target: rfd3.transforms.pipelines.build_atom14_base_pipeline
+
+diffusion_batch_size_train: 4
+diffusion_batch_size_inference: 1
+crop_size: 256
+n_recycles_train: 1
+n_recycles_validation: 1
+max_atoms_in_crop: 2560
+
+global_transform_args:
+  n_atoms_per_token: 14
+  central_atom: CB
+  sigma_perturb: 2.0
+  sigma_perturb_com: 1.0
+  association_scheme: dense
+  center_option: diffuse
+
+  generate_conformers: False
+  generate_conformers_for_non_protein_only: True
+  provide_reference_conformer_when_unmasked: True
+  ground_truth_conformer_policy: IGNORE
+  provide_elements_for_unindexed_components: True
+  use_element_for_atom_names_of_atomized_tokens: True
+
+  keep_full_binder_in_spatial_crop: False
+  max_binder_length: 170
+  max_ppi_hotspots_frac_to_provide: 0.0
+  ppi_hotspot_max_distance: 4.5
+
+  max_ss_frac_to_provide: 0.0
+  min_ss_island_len: 1
+  max_ss_island_len: 6
+
+  train_conditions:
+    unconditional:
+      frequency: 1.0
+    sequence_design:
+      frequency: 0.25
+    island:
+      frequency: 0.25
+    tipatom:
+      frequency: 0.0
+    ppi:
+      frequency: 0.0
+
+  meta_conditioning_probabilities:
+    calculate_hbonds: 0.0
+    calculate_rasa: 0.5
+    keep_protein_motif_rasa: 0.0
+    hbond_subsample: 0.0
+    unindex_leak_global_index: 0.0
+    unindex_insert_random_break: 0.0
+    unindex_remove_random_break: 0.0
+    add_1d_ss_features: 0.0
+    featurize_plddt: 0.9
+    add_global_is_non_loopy_feature: 0.5
+    add_ppi_hotspots: 0.0
+    full_binder_crop: 0.0
+
+train:
+  high_quality:
+    probability: 1.0
+    dataset:
+      dataset_parser:
+        _target_: atomworks.ml.datasets.parsers.GenericDFParser
+        base_path: ${paths.root_dir}
+        pn_unit_iid_colnames: null
+      dataset:
+        name: high_quality
+        data: /home/ubuntu/cqr_files/protein_design/COT_enzyme_design/Prot2Text-Data/enriched/training_subsets/high_quality/train.csv
+        columns_to_load:
+          - example_id
+          - path
+      transform:
+        crop_contiguous_probability: 0.5
+        crop_spatial_probability: 0.5
+        b_factor_min: 70
+
+val: null

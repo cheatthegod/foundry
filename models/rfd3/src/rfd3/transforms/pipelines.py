@@ -70,6 +70,7 @@ from rfd3.transforms.conditioning_base import (
     StrtoBoolforIsXFeatures,
     UnindexFlaggedTokens,
 )
+from rfd3.transforms.inference_conditioning import ApplyInferenceConditioning
 from rfd3.transforms.design_transforms import (
     AddAdditional1dFeaturesToFeats,
     AddGroundTruthSequence,
@@ -341,6 +342,7 @@ def build_atom14_base_pipeline_(
     # Conditioning
     train_conditions: dict,
     meta_conditioning_probabilities: dict,
+    use_metadata_conditioning: bool = False,
     # Atom14/Model
     n_atoms_per_token: int,
     central_atom: str,
@@ -386,6 +388,11 @@ def build_atom14_base_pipeline_(
             ),
         ),
     ]
+
+    # Optionally override conditioning flags from per-sample metadata (enriched Prot2Text)
+    if use_metadata_conditioning:
+        from rfd3.transforms.metadata_conditioning import OverrideConditioningFromMetadata
+        transforms.append(TrainingRoute(OverrideConditioningFromMetadata()))
 
     # Pre-crop transforms
     transforms += get_pre_crop_transforms(
@@ -514,6 +521,8 @@ def build_atom14_base_pipeline_(
         ),
         FeaturizeAtoms(),
         FeaturizepLDDT(skip=b_factor_min is not None),
+        # Apply global conditioning from inference specification (prefer_helix, prefer_buried, etc.)
+        InferenceRoute(ApplyInferenceConditioning()),
         AddAdditional1dFeaturesToFeats(
             autofill_zeros_if_not_present_in_atomarray=True,
             token_1d_features=token_1d_features,

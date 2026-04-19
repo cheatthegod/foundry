@@ -1,0 +1,124 @@
+defaults:
+  - optimizers/adam@optimizer
+  - schedulers/af3@lr_scheduler
+  - samplers/edm@net.inference_sampler
+  - components/ema@ema
+  - components/rfd3_net@net
+  - _self_
+
+net:
+  c_s: 64
+  c_z: 32
+  c_atom: 32
+  c_atompair: 8
+
+  token_initializer:
+    relative_position_encoding:
+      r_max: 16
+      s_max: 2
+
+    n_pairformer_blocks: 1
+    pairformer_block:
+      use_triangle_attn: false
+      use_triangle_mult: false
+      attention_pair_bias:
+        n_head: 4
+        kq_norm: True
+
+    token_1d_features:
+      ref_motif_token_type: 3
+      restype: 32
+      ref_plddt: 1
+      is_non_loopy: 1
+
+    downcast: ${model.net.diffusion_module.downcast}
+    atom_1d_features:
+      ref_atom_name_chars: 256
+      ref_element: 128
+      ref_charge: 1
+      ref_mask: 1
+      ref_is_motif_atom_with_fixed_coord: 1
+      ref_is_motif_atom_unindexed: 1
+      has_zero_occupancy: 1
+      ref_pos: 3
+      ref_atomwise_rasa: 3
+      active_donor: 1
+      active_acceptor: 1
+      is_atom_level_hotspot: 1
+
+    atom_transformer:
+      n_blocks: 0
+      atom_transformer_block:
+        n_head: 2
+        kq_norm: True
+        no_residual_connection_between_attention_and_transition: False
+        dropout: 0.0
+        n_attn_seq_neighbours: 2
+        n_attn_keys: 32
+
+  diffusion_module:
+    c_token: 128
+    c_t_embed: 64
+    sigma_data: 16
+    f_pred: edm
+    n_attn_seq_neighbours: 1
+    n_attn_keys: 32
+    n_recycle: 1
+    use_local_token_attention: false
+
+    upcast:
+      method: cross_attention
+      n_split: 2
+      cross_attention_block:
+        n_head: 2
+        c_model: 32
+        dropout: 0.0
+        kq_norm: True
+
+    downcast:
+      method: cross_attention
+      cross_attention_block:
+        n_head: 2
+        c_model: 32
+        dropout: 0.0
+        kq_norm: True
+
+    atom_attention_encoder:
+      n_blocks: 1
+      atom_transformer_block:
+        n_head: 2
+        kq_norm: True
+        no_residual_connection_between_attention_and_transition: False
+        dropout: 0.0
+
+    diffusion_token_encoder:
+      use_distogram: True
+      use_self: True
+      use_sinusoidal_distogram_embedder: False
+      sigma_data: ${model.net.diffusion_module.sigma_data}
+      n_pairformer_blocks: 1
+      pairformer_block:
+        use_triangle_attn: false
+        use_triangle_mult: false
+        attention_pair_bias:
+          n_head: 4
+          kq_norm: True
+
+    diffusion_transformer:
+      n_block: 2
+      n_registers: 0
+      diffusion_transformer_block:
+        n_head: 4
+        kq_norm: True
+        no_residual_connection_between_attention_and_transition: False
+        dropout: 0.0
+
+    atom_attention_decoder:
+      n_blocks: 1
+      upcast: ${model.net.diffusion_module.upcast}
+      downcast: ${model.net.diffusion_module.downcast}
+      atom_transformer_block:
+        n_head: 2
+        kq_norm: True
+        no_residual_connection_between_attention_and_transition: False
+        dropout: 0.0

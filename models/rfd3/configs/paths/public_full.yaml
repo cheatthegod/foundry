@@ -1,0 +1,9 @@
+# NOTE: public full-data path config using locally downloaded AtomWorks mirrors and metadata.
+defaults:
+  - _self_
+  - data: public_full
+
+root_dir: ${oc.env:PROJECT_ROOT}
+log_dir: ${.root_dir}/models/rfd3/local_runs
+output_dir: ${hydra:runtime.output_dir}
+work_dir: ${hydra:runtime.cwd}

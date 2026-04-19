@@ -1,0 +1,55 @@
+# @package _global_
+
+defaults:
+  - override /datasets: prot2text_conditioned_enzyme
+  - override /model: rfd3_smoke
+  - override /paths: local_smoke
+  - override /logger: csv
+  - _self_
+
+# Smoke test for metadata-conditioned enzyme training.
+
+name: rfd3-prot2text-conditioned-enzyme-smoke
+project: rfd3-prot2text
+tags:
+  - prot2text
+  - enzyme
+  - conditioned
+  - smoke
+ckpt_path: null
+
+trainer:
+  accelerator: cpu
+  devices_per_node: 1
+  num_nodes: 1
+  precision: 32-true
+  n_examples_per_epoch: 4
+  max_epochs: 1
+  grad_accum_steps: 1
+  checkpoint_every_n_epochs: 1
+  validate_every_n_epochs: 1000
+  limit_train_batches: 4
+  limit_val_batches: 0
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 0
+      pin_memory: False
+      prefetch_factor: null
+    n_fallback_retries: 0
+  val:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 0
+      pin_memory: False
+      prefetch_factor: null
+
+datasets:
+  diffusion_batch_size_train: 1
+  crop_size: 128
+  max_atoms_in_crop: 1280
+  val: null

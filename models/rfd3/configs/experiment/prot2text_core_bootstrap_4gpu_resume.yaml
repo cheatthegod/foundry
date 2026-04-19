@@ -1,0 +1,49 @@
+# @package _global_
+
+defaults:
+  - override /datasets: prot2text_core_64_1024
+  - override /paths: local_smoke
+  - override /logger: csv
+  - _self_
+
+# 4-GPU resume of core bootstrap from epoch-75 checkpoint.
+
+name: rfd3-prot2text-core-bootstrap-4gpu-resume
+project: rfd3-prot2text
+tags:
+  - prot2text
+  - monomer
+  - bootstrap
+  - noligand
+  - 4gpu
+  - resume
+ckpt_path: /home/ubuntu/cqr_files/protein_design/COT_enzyme_design/foundry/models/rfd3/local_runs/train/rfd3-prot2text-core-bootstrap-shared/2026-04-14_01-00_JOB_default/ckpt/epoch-0075.ckpt
+
+trainer:
+  accelerator: cuda
+  devices_per_node: 4
+  num_nodes: 1
+  precision: bf16-mixed
+  max_epochs: 200
+  grad_accum_steps: 4
+  checkpoint_every_n_epochs: 5
+  validate_every_n_epochs: 1000
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 8
+  val:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 0
+
+datasets:
+  val: null

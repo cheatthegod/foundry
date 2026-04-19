@@ -1,0 +1,13 @@
+pdb_data_dir: ${paths.root_dir}/models/rfd3/local_data/pdb_mirror
+pdb_parquet_dir: ${paths.root_dir}/models/rfd3/local_data
+
+monomer_distillation_data_dir: ${paths.root_dir}/models/rfd3/local_data
+monomer_distillation_parquet_dir: ${paths.root_dir}/models/rfd3/local_data
+
+failed_examples_dir: ${paths.root_dir}/models/rfd3/local_data/failed_examples
+
+design_benchmark_data_dir: ${paths.root_dir}/models/rfd3/docs/examples
+design_model_weight_dir: ${paths.root_dir}/models/rfd3/local_data/checkpoints
+
+residue_cache_dir: null
+cif_cache_dir: ${paths.root_dir}/models/rfd3/local_data/cif_cache

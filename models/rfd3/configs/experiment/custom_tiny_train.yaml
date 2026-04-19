@@ -1,0 +1,49 @@
+# @package _global_
+
+defaults:
+  - override /datasets: custom_tiny
+  - override /paths: local_smoke
+  - override /model: rfd3_smoke
+  - override /logger: csv
+  - _self_
+
+name: rfd3-custom-tiny-train
+project: rfd3-local
+tags:
+  - local
+  - tiny
+  - custom
+ckpt_path: null
+
+trainer:
+  accelerator: cpu
+  devices_per_node: 1
+  num_nodes: 1
+  precision: 32-true
+  n_examples_per_epoch: 3
+  max_epochs: 2
+  grad_accum_steps: 1
+  checkpoint_every_n_epochs: 1
+  validate_every_n_epochs: 1000
+  limit_train_batches: 3
+  limit_val_batches: 0
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 0
+      pin_memory: False
+      prefetch_factor: null
+    n_fallback_retries: 0
+  val:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 0
+      pin_memory: False
+      prefetch_factor: null
+
+datasets:
+  val: null

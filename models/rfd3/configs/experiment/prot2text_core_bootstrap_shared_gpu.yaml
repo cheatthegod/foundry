@@ -1,0 +1,57 @@
+# @package _global_
+
+defaults:
+  - override /datasets: prot2text_core_64_1024
+  - override /paths: local_smoke
+  - override /logger: csv
+  - _self_
+
+# Single-GPU resume of core bootstrap, designed to share GPU with DISCO.
+# Reduced batch/crop to fit in ~35 GB remaining memory.
+# Resume from epoch-75 checkpoint of the interrupted 4-GPU run.
+
+name: rfd3-prot2text-core-bootstrap-shared
+project: rfd3-prot2text
+tags:
+  - prot2text
+  - monomer
+  - bootstrap
+  - noligand
+  - shared_gpu
+  - resume
+ckpt_path: /home/ubuntu/cqr_files/protein_design/COT_enzyme_design/foundry/models/rfd3/local_runs/train/rfd3-prot2text-core-bootstrap-4gpu/2026-04-12_05-42_JOB_default/ckpt/epoch-0074.ckpt
+
+trainer:
+  accelerator: cuda
+  devices_per_node: 1
+  num_nodes: 1
+  precision: bf16-mixed
+  max_epochs: 200
+  grad_accum_steps: 8
+  checkpoint_every_n_epochs: 5
+  validate_every_n_epochs: 1000
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 8
+  val:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 0
+
+# Reduce memory footprint
+diffusion_batch_size_train: 1
+crop_size: 192
+max_atoms_in_crop: 1920
+n_recycles_train: 1
+
+datasets:
+  val: null

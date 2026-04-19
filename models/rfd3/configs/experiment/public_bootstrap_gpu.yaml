@@ -1,0 +1,90 @@
+# @package _global_
+
+defaults:
+  - override /paths: public_bootstrap
+  - override /logger: csv
+  - override /model: rfd3_smoke
+  - _self_
+
+name: rfd3-public-bootstrap-gpu
+project: rfd3-public
+tags:
+  - public
+  - bootstrap
+  - gpu
+ckpt_path: null
+
+trainer:
+  accelerator: cuda
+  devices_per_node: 1
+  num_nodes: 1
+  precision: bf16-mixed
+  n_examples_per_epoch: 8
+  max_epochs: 1
+  grad_accum_steps: 1
+  checkpoint_every_n_epochs: 1
+  validate_every_n_epochs: 1000
+  limit_train_batches: 8
+  limit_val_batches: 0
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 8
+  val:
+    dataloader_params:
+      batch_size: 1
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 2
+
+datasets:
+  diffusion_batch_size_train: 1
+  crop_size: 128
+  max_atoms_in_crop: 1280
+  val: null
+  train:
+    pdb:
+      probability: 1.0
+      sub_datasets:
+        interface:
+          dataset:
+            transform:
+              crop_contiguous_probability: 1.0
+              crop_spatial_probability: 0.0
+        pn_unit:
+          dataset:
+            transform:
+              crop_contiguous_probability: 1.0
+              crop_spatial_probability: 0.0
+  global_transform_args:
+    train_conditions:
+      unconditional:
+        frequency: 1.0
+      island:
+        frequency: 0.0
+      sequence_design:
+        frequency: 0.0
+      tipatom:
+        frequency: 0.0
+      ppi:
+        frequency: 0.0
+    meta_conditioning_probabilities:
+      calculate_hbonds: 0.0
+      calculate_rasa: 0.0
+      keep_protein_motif_rasa: 0.0
+      hbond_subsample: 0.0
+      unindex_leak_global_index: 0.0
+      unindex_insert_random_break: 0.0
+      unindex_remove_random_break: 0.0
+      add_1d_ss_features: 0.0
+      featurize_plddt: 0.0
+      add_global_is_non_loopy_feature: 0.0
+      add_ppi_hotspots: 0.0
+      full_binder_crop: 0.0

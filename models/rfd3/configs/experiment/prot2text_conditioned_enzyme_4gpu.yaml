@@ -1,0 +1,50 @@
+# @package _global_
+
+defaults:
+  - override /datasets: prot2text_conditioned_enzyme
+  - override /paths: local_smoke
+  - override /logger: csv
+  - _self_
+
+# Line B: metadata-conditioned enzyme training on 4 GPUs.
+# Resume from epoch-3 checkpoint of single-GPU run.
+
+name: rfd3-prot2text-conditioned-enzyme-4gpu
+project: rfd3-prot2text
+tags:
+  - prot2text
+  - enzyme
+  - conditioned
+  - metadata
+  - 4gpu
+  - line_b
+ckpt_path: /home/ubuntu/cqr_files/protein_design/COT_enzyme_design/foundry/models/rfd3/local_runs/train/rfd3-prot2text-conditioned-enzyme-gpu/2026-04-12_21-49_JOB_default/ckpt/epoch-0003.ckpt
+
+trainer:
+  accelerator: cuda
+  devices_per_node: 4
+  num_nodes: 1
+  precision: bf16-mixed
+  max_epochs: 20
+  grad_accum_steps: 4
+  checkpoint_every_n_epochs: 2
+  validate_every_n_epochs: 1000
+  prevalidate: False
+  clip_grad_max_norm: 1.0
+
+dataloader:
+  train:
+    dataloader_params:
+      num_workers: 2
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 8
+  val:
+    dataloader_params:
+      num_workers: 1
+      pin_memory: True
+      prefetch_factor: 2
+    n_fallback_retries: 0
+
+datasets:
+  val: null
